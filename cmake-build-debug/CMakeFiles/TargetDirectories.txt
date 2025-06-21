@@ -1,0 +1,3 @@
+/Users/amanyadav/CLionProjects/cg-vulkan/cmake-build-debug/CMakeFiles/cg_vulkan.dir
+/Users/amanyadav/CLionProjects/cg-vulkan/cmake-build-debug/CMakeFiles/edit_cache.dir
+/Users/amanyadav/CLionProjects/cg-vulkan/cmake-build-debug/CMakeFiles/rebuild_cache.dir
