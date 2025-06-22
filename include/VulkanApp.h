@@ -27,6 +27,7 @@ private:
     const bool enableValidationLayers = true;
 #endif
 
+    void createSurface();
     void initVulkan();
     void mainLoop();
     void cleanup();
