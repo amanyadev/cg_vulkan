@@ -9,8 +9,10 @@ find_package(glfw3 REQUIRED)
 add_executable(cg_vulkan main.cpp
         src/VulkanApp.cpp
         src/VulkanDebug.cpp
+        src/VulkanDevice.cpp
         include/VulkanApp.h
-        include/VulkanDebug.h)
+        include/VulkanDebug.h
+        include/VulkanDevice.h)
 
 # include Vulkan headers and link against Vulkan libraries
 target_include_directories(cg_vulkan PRIVATE ${Vulkan_INCLUDE_DIRS})
