@@ -11,7 +11,6 @@ public:
     static void populateDebugMessengerCreateInfo(VkDebugUtilsMessengerCreateInfoEXT& createInfo);
     static void setupDebugMessenger(VkInstance instance, VkDebugUtilsMessengerEXT& debugMessenger);
     static std::vector<const char*> getRequiredExtensions(bool enableValidationLayers);
-
     static VkResult CreateDebugUtilsMessengerEXT(VkInstance instance,
         const VkDebugUtilsMessengerCreateInfoEXT* pCreateInfo,
         const VkAllocationCallbacks* pAllocator,
