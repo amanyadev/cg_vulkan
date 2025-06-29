@@ -1,73 +1,92 @@
-cmake_minimum_required(VERSION 3.31)
+cmake_minimum_required(VERSION 3.20)
 project(cg_vulkan)
 
-set(CMAKE_CXX_STANDARD 20)
+set(CMAKE_CXX_STANDARD 17)
 
+# Find required packages
 find_package(Vulkan REQUIRED)
 find_package(glfw3 REQUIRED)
 
+# Define source files by component
+set(CORE_SOURCES
+    src/core/VulkanApp.cpp
+    src/core/VulkanDevice.cpp
+    src/core/WindowManager.cpp)
+
+set(DEBUG_SOURCES
+    src/debug/VulkanDebug.cpp)
+
+set(RENDERING_SOURCES
+    src/rendering/CommandBuffer.cpp
+    src/rendering/Framebuffer.cpp
+    src/rendering/GraphicsPipeline.cpp
+    src/rendering/RenderPass.cpp
+    src/rendering/SwapChain.cpp)
+
+# Combine all sources
+set(SOURCES
+    ${CORE_SOURCES}
+    ${DEBUG_SOURCES}
+    ${RENDERING_SOURCES}
+    main.cpp)
+
+# Create executable
+add_executable(${PROJECT_NAME} ${SOURCES})
+
 # Add shader compilation
-find_program(GLSL_VALIDATOR glslangValidator HINTS /usr/local/bin /usr/bin $ENV{VULKAN_SDK}/bin)
+find_program(GLSL_VALIDATOR glslangValidator HINTS
+    /usr/local/bin
+    /usr/bin
+    $ENV{VULKAN_SDK}/bin)
 
-function(compile_shader SHADER_NAME)
+if(NOT GLSL_VALIDATOR)
+    message(FATAL_ERROR "glslangValidator not found!")
+endif()
+
+# Create shader build targets
+set(SHADER_SOURCE_DIR ${CMAKE_SOURCE_DIR}/shaders)
+set(SHADER_BINARY_DIR ${CMAKE_BINARY_DIR}/shaders)
+
+file(MAKE_DIRECTORY ${SHADER_BINARY_DIR})
+
+set(SHADER_SOURCES
+    ${SHADER_SOURCE_DIR}/shader.vert
+    ${SHADER_SOURCE_DIR}/shader.frag)
+
+foreach(SHADER ${SHADER_SOURCES})
+    get_filename_component(SHADER_NAME ${SHADER} NAME)
     add_custom_command(
-            OUTPUT ${CMAKE_BINARY_DIR}/shaders/${SHADER_NAME}.spv
-            COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_BINARY_DIR}/shaders/
-            COMMAND ${GLSL_VALIDATOR} -V ${CMAKE_SOURCE_DIR}/shaders/${SHADER_NAME} -o ${CMAKE_BINARY_DIR}/shaders/${SHADER_NAME}.spv
-            DEPENDS ${CMAKE_SOURCE_DIR}/shaders/${SHADER_NAME}
-            COMMENT "Compiling ${SHADER_NAME}"
+        OUTPUT ${SHADER_BINARY_DIR}/${SHADER_NAME}.spv
+        COMMAND ${GLSL_VALIDATOR} -V ${SHADER} -o ${SHADER_BINARY_DIR}/${SHADER_NAME}.spv
+        DEPENDS ${SHADER}
+        COMMENT "Compiling ${SHADER_NAME}"
     )
-    list(APPEND SHADER_BINARY_FILES ${CMAKE_BINARY_DIR}/shaders/${SHADER_NAME}.spv)
-endfunction()
+    list(APPEND SHADER_BINARIES ${SHADER_BINARY_DIR}/${SHADER_NAME}.spv)
+endforeach()
 
-compile_shader(shader.vert)
-compile_shader(shader.frag)
+add_custom_target(Shaders DEPENDS ${SHADER_BINARIES})
+add_dependencies(${PROJECT_NAME} Shaders)
 
-add_custom_target(
-        Shaders
-        DEPENDS
-        ${CMAKE_BINARY_DIR}/shaders/shader.vert.spv
-        ${CMAKE_BINARY_DIR}/shaders/shader.frag.spv
-)
+# Configure include directories
+target_include_directories(${PROJECT_NAME} PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${Vulkan_INCLUDE_DIRS})
 
-add_executable(cg_vulkan main.cpp
-        src/VulkanApp.cpp
-        src/VulkanDebug.cpp
-        src/VulkanDevice.cpp
-        src/WindowManager.cpp
-        src/SwapChain.cpp
-        src/GraphicsPipeline.cpp
-        src/RenderPass.cpp
-        src/Framebuffer.cpp
-        src/CommandBuffer.cpp
-        include/VulkanApp.h
-        include/VulkanDebug.h
-        include/VulkanDevice.h
-        include/WindowManager.h
-        include/SwapChain.h
-        include/GraphicsPipeline.h
-        include/RenderPass.h
-        include/Framebuffer.h
-        include/Framebuffer.h)
+if(APPLE)
+    target_compile_definitions(${PROJECT_NAME} PRIVATE
+        VK_ENABLE_BETA_EXTENSIONS
+        VK_USE_PLATFORM_MACOS_MVK)
+endif()
 
-add_dependencies(cg_vulkan Shaders)
+# Link libraries
+target_link_libraries(${PROJECT_NAME} PRIVATE
+    Vulkan::Vulkan
+    glfw)
 
-# include Vulkan headers and link against Vulkan libraries
-target_include_directories(cg_vulkan PRIVATE ${Vulkan_INCLUDE_DIRS})
-target_link_libraries(cg_vulkan PRIVATE ${Vulkan_LIBRARIES})
-
-# include GLM headers
-find_path(GLM_INCLUDE_DIR glm/glm.hpp PATHS /opt/homebrew/opt/glm/include)
-target_include_directories(cg_vulkan PRIVATE ${GLM_INCLUDE_DIR})
-
-# include GLFW headers and link against GLFW libraries
-target_link_libraries(cg_vulkan PRIVATE glfw)
-
+# Copy shaders to build directory
 add_custom_command(
-        TARGET cg_vulkan POST_BUILD
-        COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:cg_vulkan>/shaders/"
-        COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${CMAKE_BINARY_DIR}/shaders/shader.vert.spv"
-        "${CMAKE_BINARY_DIR}/shaders/shader.frag.spv"
-        "$<TARGET_FILE_DIR:cg_vulkan>/shaders/"
-)
+    TARGET ${PROJECT_NAME} POST_BUILD
+    COMMAND ${CMAKE_COMMAND} -E make_directory "$<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders/"
+    COMMAND ${CMAKE_COMMAND} -E copy_if_different
+        ${SHADER_BINARIES}
+        "$<TARGET_FILE_DIR:${PROJECT_NAME}>/shaders/")
