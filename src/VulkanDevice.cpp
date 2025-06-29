@@ -23,19 +23,16 @@ void VulkanDevice::createLogicalDevice() {
     QueueFamilyIndices indices = findQueueFamilies(m_physicalDevice);
 
     std::vector<VkDeviceQueueCreateInfo> queueCreateInfos;
-    std::set<uint32_t> uniqueQueueFamilies = {
-        indices.graphicsFamily.value(),
-        indices.presentFamily.value()
-    };
+    std::set<uint32_t> uniqueQueueFamilies = {indices.graphicsFamily.value(), indices.presentFamily.value()};
 
     std::cout << "VulkanDevice: Setting up " << uniqueQueueFamilies.size() << " queue(s)" << std::endl;
 
     float queuePriority = 1.0f;
     for (uint32_t queueFamily : uniqueQueueFamilies) {
         VkDeviceQueueCreateInfo queueCreateInfo{};
-        queueCreateInfo.sType = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
+        queueCreateInfo.sType            = VK_STRUCTURE_TYPE_DEVICE_QUEUE_CREATE_INFO;
         queueCreateInfo.queueFamilyIndex = queueFamily;
-        queueCreateInfo.queueCount = 1;
+        queueCreateInfo.queueCount       = 1;
         queueCreateInfo.pQueuePriorities = &queuePriority;
         queueCreateInfos.push_back(queueCreateInfo);
     }
@@ -43,10 +40,10 @@ void VulkanDevice::createLogicalDevice() {
     VkPhysicalDeviceFeatures deviceFeatures{};
 
     VkDeviceCreateInfo createInfo{};
-    createInfo.sType = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
+    createInfo.sType                = VK_STRUCTURE_TYPE_DEVICE_CREATE_INFO;
     createInfo.queueCreateInfoCount = static_cast<uint32_t>(queueCreateInfos.size());
-    createInfo.pQueueCreateInfos = queueCreateInfos.data();
-    createInfo.pEnabledFeatures = &deviceFeatures;
+    createInfo.pQueueCreateInfos    = queueCreateInfos.data();
+    createInfo.pEnabledFeatures     = &deviceFeatures;
 
     std::vector<const char*> deviceExtensions;
 #ifdef __APPLE__
@@ -59,11 +56,11 @@ void VulkanDevice::createLogicalDevice() {
         std::cout << "  - " << ext << std::endl;
     }
 
-    createInfo.enabledExtensionCount = static_cast<uint32_t>(deviceExtensions.size());
+    createInfo.enabledExtensionCount   = static_cast<uint32_t>(deviceExtensions.size());
     createInfo.ppEnabledExtensionNames = deviceExtensions.data();
 
     if (m_enableValidationLayers) {
-        createInfo.enabledLayerCount = static_cast<uint32_t>(m_validationLayers.size());
+        createInfo.enabledLayerCount   = static_cast<uint32_t>(m_validationLayers.size());
         createInfo.ppEnabledLayerNames = m_validationLayers.data();
     }
 
@@ -139,8 +136,8 @@ bool VulkanDevice::isDeviceSuitable(VkPhysicalDevice device) {
         return false;
     }
 
-    std::cout << "VulkanDevice: Device supports " << formatCount << " surface format(s) and "
-              << presentModeCount << " present mode(s)" << std::endl;
+    std::cout << "VulkanDevice: Device supports " << formatCount << " surface format(s) and " << presentModeCount
+              << " present mode(s)" << std::endl;
     return true;
 }
 
@@ -155,7 +152,7 @@ int VulkanDevice::rateDeviceSuitability(VkPhysicalDevice device) {
     if (deviceProperties.deviceType == VK_PHYSICAL_DEVICE_TYPE_DISCRETE_GPU) {
         score += 1000;
     }
-    score += deviceProperties.limits.maxImageDimension2D;
+    score += static_cast<int>(deviceProperties.limits.maxImageDimension2D);
 
     if (!deviceFeatures.geometryShader) {
         return 0;
@@ -198,4 +195,42 @@ VulkanDevice::QueueFamilyIndices VulkanDevice::findQueueFamilies(VkPhysicalDevic
     }
 
     return indices;
+}
+
+VulkanDevice::SwapChainSupportDetails VulkanDevice::querySwapChainSupport(VkPhysicalDevice device) {
+    SwapChainSupportDetails details;
+
+    vkGetPhysicalDeviceSurfaceCapabilitiesKHR(device, surface, &details.capabilities);
+
+    uint32_t formatCount;
+    vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, nullptr);
+    if (formatCount != 0) {
+        details.formats.resize(formatCount);
+        vkGetPhysicalDeviceSurfaceFormatsKHR(device, surface, &formatCount, details.formats.data());
+    }
+
+    uint32_t presentModeCount;
+    vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, nullptr);
+    if (presentModeCount != 0) {
+        details.presentModes.resize(presentModeCount);
+        vkGetPhysicalDeviceSurfacePresentModesKHR(device, surface, &presentModeCount, details.presentModes.data());
+    }
+
+    return details;
+}
+VkPresentModeKHR VulkanDevice::chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes) {
+    for (const auto& mode : availablePresentModes) {
+        if (mode == VK_PRESENT_MODE_MAILBOX_KHR) {
+            return mode; // Mailbox is preferred for low latency
+        }
+    }
+    return VK_PRESENT_MODE_FIFO_KHR; // Fallback to FIFO
+}
+VkSurfaceFormatKHR VulkanDevice::chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats) {
+    for (const auto& format : availableFormats) {
+        if (format.format == VK_FORMAT_B8G8R8A8_SRGB && format.colorSpace == VK_COLOR_SPACE_SRGB_NONLINEAR_KHR) {
+            return format; // Preferred format
+        }
+    }
+    return availableFormats[0]; // Fallback to the first available format
 }

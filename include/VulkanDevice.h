@@ -1,9 +1,9 @@
 #ifndef VULKAN_DEVICE_H
 #define VULKAN_DEVICE_H
 
-#include <vulkan/vulkan.h>
 #include <optional>
 #include <vector>
+#include <vulkan/vulkan.h>
 
 class VulkanDevice {
 public:
@@ -16,6 +16,12 @@ public:
         }
     };
 
+    struct SwapChainSupportDetails {
+        VkSurfaceCapabilitiesKHR capabilities;
+        std::vector<VkSurfaceFormatKHR> formats;
+        std::vector<VkPresentModeKHR> presentModes;
+    };
+
     VulkanDevice(VkInstance instance, const std::vector<const char*>& validationLayers, bool enableValidationLayers);
     ~VulkanDevice();
 
@@ -23,14 +29,29 @@ public:
     void pickPhysicalDevice();
     bool isDeviceSuitable(VkPhysicalDevice device);
     QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device);
-    void setSurface(VkSurfaceKHR newSurface) { surface = newSurface; }
+    SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice device);
+    static VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>& availableFormats);
+    static VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>& availablePresentModes);
+    void setSurface(VkSurfaceKHR newSurface) {
+        surface = newSurface;
+    }
 
     // Getters
-    VkDevice getDevice() const { return m_logicalDevice; }
-    VkPhysicalDevice getPhysicalDevice() const { return m_physicalDevice; }
-    VkQueue getGraphicsQueue() const { return m_graphicsQueue; }
-    VkQueue getPresentQueue() const { return m_presentQueue; }
-    VkSurfaceKHR getSurface() const { return surface; }
+    [[nodiscard]] VkDevice getDevice() const {
+        return m_logicalDevice;
+    }
+    [[nodiscard]] VkPhysicalDevice getPhysicalDevice() const {
+        return m_physicalDevice;
+    }
+    [[nodiscard]] VkQueue getGraphicsQueue() const {
+        return m_graphicsQueue;
+    }
+    [[nodiscard]] VkQueue getPresentQueue() const {
+        return m_presentQueue;
+    }
+    [[nodiscard]] VkSurfaceKHR getSurface() const {
+        return surface;
+    }
 
 private:
     static int rateDeviceSuitability(VkPhysicalDevice device);
