@@ -39,6 +39,7 @@ add_executable(cg_vulkan main.cpp
         src/GraphicsPipeline.cpp
         src/RenderPass.cpp
         src/Framebuffer.cpp
+        src/CommandBuffer.cpp
         include/VulkanApp.h
         include/VulkanDebug.h
         include/VulkanDevice.h
@@ -46,6 +47,7 @@ add_executable(cg_vulkan main.cpp
         include/SwapChain.h
         include/GraphicsPipeline.h
         include/RenderPass.h
+        include/Framebuffer.h
         include/Framebuffer.h)
 
 add_dependencies(cg_vulkan Shaders)

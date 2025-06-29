@@ -5,6 +5,7 @@
 #include "SwapChain.h"
 #include "RenderPass.h"
 #include "Framebuffer.h"
+#include "CommandBuffer.h"
 #include <vulkan/vulkan.h>
 #include <string>
 #include <vector>
@@ -18,10 +19,12 @@ public:
     VkPipeline getPipeline() const { return m_graphicsPipeline; }
     VkPipelineLayout getPipelineLayout() const { return m_pipelineLayout; }
     Framebuffer* getFramebuffer() const { return m_framebuffer.get(); }
+    CommandBuffer* getCommandBuffer() const { return m_commandBuffer.get(); }
 
 private:
     void createPipeline();
     void createGraphicsPipeline();
+    void createCommandBuffers();
     static std::vector<char> readShaderFile(const std::string& filename);
     VkShaderModule createShaderModule(const std::vector<char>& code);
 
@@ -29,6 +32,7 @@ private:
     SwapChain* m_swapChain;
     std::unique_ptr<RenderPass> m_renderPass;
     std::unique_ptr<Framebuffer> m_framebuffer;
+    std::unique_ptr<CommandBuffer> m_commandBuffer;
     VkPipelineLayout m_pipelineLayout{VK_NULL_HANDLE};
     VkPipeline m_graphicsPipeline{VK_NULL_HANDLE};
 };
