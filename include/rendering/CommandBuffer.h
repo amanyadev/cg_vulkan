@@ -11,7 +11,11 @@ public:
 
     void createCommandPool();
     void createCommandBuffers(VkRenderPass renderPass, const std::vector<VkFramebuffer>& framebuffers,
-                            VkExtent2D extent, VkPipeline graphicsPipeline);
+                            VkExtent2D extent, VkPipeline graphicsPipeline, VkPipelineLayout pipelineLayout,
+                            VkDescriptorSet descriptorSet);
+    void recordCommandBuffer(size_t index, VkRenderPass renderPass, VkFramebuffer framebuffer,
+                           VkExtent2D extent, VkPipeline graphicsPipeline, VkPipelineLayout pipelineLayout,
+                           VkDescriptorSet descriptorSet, class DebugUI* debugUI = nullptr);
     VkCommandBuffer getCommandBuffer(size_t index) const { return m_commandBuffers[index]; }
     size_t size() const { return m_commandBuffers.size(); }
 

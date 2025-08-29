@@ -16,7 +16,7 @@ WindowManager::WindowManager(uint32_t width, uint32_t height, const char* title)
 
     // Required hints for Vulkan
     glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-    glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
+    glfwWindowHint(GLFW_RESIZABLE, GLFW_TRUE);
 #ifdef __APPLE__
     glfwWindowHint(GLFW_COCOA_RETINA_FRAMEBUFFER, GLFW_TRUE);
 #endif
@@ -26,6 +26,10 @@ WindowManager::WindowManager(uint32_t width, uint32_t height, const char* title)
         glfwTerminate();
         throw std::runtime_error("Failed to create GLFW window");
     }
+    
+    // Set user pointer for callbacks
+    glfwSetWindowUserPointer(m_window, this);
+    glfwSetFramebufferSizeCallback(m_window, framebufferResizeCallback);
 
     // Verify Vulkan support
     if (!glfwVulkanSupported()) {
@@ -48,4 +52,27 @@ bool WindowManager::shouldClose() const {
 
 void WindowManager::pollEvents() const {
     glfwPollEvents();
+}
+
+void WindowManager::framebufferResizeCallback(GLFWwindow* window, int width, int height) {
+    auto* windowManager = reinterpret_cast<WindowManager*>(glfwGetWindowUserPointer(window));
+    windowManager->m_framebufferResized = true;
+    windowManager->updateSize(static_cast<uint32_t>(width), static_cast<uint32_t>(height));
+}
+
+// Mouse control implementations
+void WindowManager::getMousePosition(double* xpos, double* ypos) const {
+    glfwGetCursorPos(m_window, xpos, ypos);
+}
+
+void WindowManager::setMousePosition(double xpos, double ypos) const {
+    glfwSetCursorPos(m_window, xpos, ypos);
+}
+
+bool WindowManager::isMouseButtonPressed(int button) const {
+    return glfwGetMouseButton(m_window, button) == GLFW_PRESS;
+}
+
+void WindowManager::setCursorMode(int mode) const {
+    glfwSetInputMode(m_window, GLFW_CURSOR, mode);
 }

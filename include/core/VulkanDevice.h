@@ -51,6 +51,9 @@ public:
     [[nodiscard]] VkSurfaceKHR getSurface() const {
         return surface;
     }
+    [[nodiscard]] VkInstance getInstance() const {
+        return m_instance;
+    }
 
 private:
     static int rateDeviceSuitability(VkPhysicalDevice device);

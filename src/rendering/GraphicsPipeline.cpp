@@ -14,6 +14,7 @@ GraphicsPipeline::GraphicsPipeline(VulkanDevice* device, SwapChain* swapChain)
     m_renderPass    = std::make_unique<RenderPass>(device, swapChain);
     m_framebuffer   = std::make_unique<Framebuffer>(device, swapChain, m_renderPass->getRenderPass());
     m_commandBuffer = std::make_unique<CommandBuffer>(device);
+    m_uniformBuffer = std::make_unique<UniformBuffer>(device, sizeof(UniformBufferObject));
     createPipeline();
     createCommandBuffers();
 }
@@ -173,6 +174,9 @@ void GraphicsPipeline::createGraphicsPipeline() {
     // Pipeline layout
     VkPipelineLayoutCreateInfo pipelineLayoutInfo{};
     pipelineLayoutInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
+    pipelineLayoutInfo.setLayoutCount = 1;
+    VkDescriptorSetLayout descriptorSetLayout = m_uniformBuffer->getDescriptorSetLayout();
+    pipelineLayoutInfo.pSetLayouts = &descriptorSetLayout;
 
     if (vkCreatePipelineLayout(m_device->getDevice(), &pipelineLayoutInfo, nullptr, &m_pipelineLayout) != VK_SUCCESS) {
         throw std::runtime_error("Failed to create pipeline layout");
@@ -221,6 +225,8 @@ void GraphicsPipeline::createCommandBuffers() {
         m_renderPass->getRenderPass(),
         framebuffers,
         m_swapChain->getExtent(),
-        m_graphicsPipeline
+        m_graphicsPipeline,
+        m_pipelineLayout,
+        m_uniformBuffer->getDescriptorSet()
     );
 }

@@ -6,6 +6,37 @@ set(CMAKE_CXX_STANDARD 17)
 # Find required packages
 find_package(Vulkan REQUIRED)
 find_package(glfw3 REQUIRED)
+find_package(glm REQUIRED)
+
+# Fetch ImGui
+include(FetchContent)
+FetchContent_Declare(
+    imgui
+    GIT_REPOSITORY https://github.com/ocornut/imgui.git
+    GIT_TAG docking
+)
+FetchContent_MakeAvailable(imgui)
+
+# Create ImGui library
+add_library(imgui STATIC
+    ${imgui_SOURCE_DIR}/imgui.cpp
+    ${imgui_SOURCE_DIR}/imgui_demo.cpp  
+    ${imgui_SOURCE_DIR}/imgui_draw.cpp
+    ${imgui_SOURCE_DIR}/imgui_tables.cpp
+    ${imgui_SOURCE_DIR}/imgui_widgets.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_glfw.cpp
+    ${imgui_SOURCE_DIR}/backends/imgui_impl_vulkan.cpp
+)
+
+target_include_directories(imgui PUBLIC 
+    ${imgui_SOURCE_DIR}
+    ${imgui_SOURCE_DIR}/backends
+)
+
+target_link_libraries(imgui PRIVATE
+    Vulkan::Vulkan
+    glfw
+)
 
 # Define source files by component
 set(CORE_SOURCES
@@ -22,13 +53,18 @@ set(RENDERING_SOURCES
         src/rendering/Framebuffer.cpp
         src/rendering/GraphicsPipeline.cpp
         src/rendering/RenderPass.cpp
-        src/rendering/SwapChain.cpp)
+        src/rendering/SwapChain.cpp
+        src/rendering/UniformBuffer.cpp)
+
+set(UI_SOURCES
+        src/ui/DebugUI.cpp)
 
 # Combine all sources
 set(SOURCES
         ${CORE_SOURCES}
         ${DEBUG_SOURCES}
         ${RENDERING_SOURCES}
+        ${UI_SOURCES}
         main.cpp)
 
 # Create executable
@@ -82,7 +118,9 @@ endif ()
 # Link libraries
 target_link_libraries(${PROJECT_NAME} PRIVATE
         Vulkan::Vulkan
-        glfw)
+        glfw
+        glm::glm
+        imgui)
 
 # Copy shaders to build directory
 add_custom_command(

@@ -5,6 +5,7 @@
 #include "rendering/RenderPass.h"
 #include "rendering/Framebuffer.h"
 #include "rendering/CommandBuffer.h"
+#include "rendering/UniformBuffer.h"
 #include <vulkan/vulkan.h>
 #include <string>
 #include <vector>
@@ -20,6 +21,7 @@ public:
     VkPipelineLayout getPipelineLayout() const { return m_pipelineLayout; }
     Framebuffer* getFramebuffer() const { return m_framebuffer.get(); }
     CommandBuffer* getCommandBuffer() const { return m_commandBuffer.get(); }
+    UniformBuffer* getUniformBuffer() const { return m_uniformBuffer.get(); }
 
 private:
     void createPipeline();
@@ -33,6 +35,7 @@ private:
     std::unique_ptr<RenderPass> m_renderPass;
     std::unique_ptr<Framebuffer> m_framebuffer;
     std::unique_ptr<CommandBuffer> m_commandBuffer;
+    std::unique_ptr<UniformBuffer> m_uniformBuffer;
     VkPipelineLayout m_pipelineLayout{VK_NULL_HANDLE};
     VkPipeline m_graphicsPipeline{VK_NULL_HANDLE};
 };
