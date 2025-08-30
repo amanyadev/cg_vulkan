@@ -53,19 +53,22 @@ void VulkanApp::initVulkan() {
 
     std::cout << "Creating Debug UI..." << std::endl;
     m_debugUI = std::make_unique<DebugUI>(m_device.get(), m_swapChain.get(), m_pipeline->getRenderPass(), m_windowManager->getWindow());
+    
+    std::cout << "Creating Frustum Culler..." << std::endl;
+    m_frustumCuller = std::make_unique<FrustumCuller>();
+    
+    // Skip ECS completely - focus on stunning terrain rendering performance
 
     // Initialize animation timer
     m_startTime = std::chrono::high_resolution_clock::now();
     m_lastFrameTime = m_startTime;
     
-    // Initialize render settings with simplified defaults
-    m_renderSettings.maxSteps = 64;         // Further reduced for better performance
-    m_renderSettings.maxDistance = 100.0f;  // Reduced for better performance  
-    m_renderSettings.enableTrees = false;   // Disabled for simplicity
-    m_renderSettings.enableWater = false;   // Disabled for simplicity
-    m_renderSettings.enableClouds = false;  // Disabled for simplicity
-    m_renderSettings.qualityLevel = 0;      // Low quality for better performance
-    m_renderSettings.treeDistance = 30.0f;  
+    // Initialize render settings for stunning terrain
+    m_renderSettings.maxSteps = 64;         
+    m_renderSettings.maxDistance = 150.0f;  
+    m_renderSettings.enableWater = true;    
+    m_renderSettings.qualityLevel = 1;      // Medium quality
+    m_renderSettings.viewDistance = 250.0f; // Extended view distance
     m_renderSettings.showDebugUI = true;
     m_renderSettings.enableVSync = true;
 
@@ -99,6 +102,8 @@ void VulkanApp::mainLoop() {
         m_debugUI->newFrame();
         m_debugUI->renderDebugPanel(m_performanceStats, m_renderSettings);
         m_debugUI->render();
+        
+        // Removed ECS updates for performance - focusing on stunning terrain
         
         updateUniformBuffer();
         drawFrame();
@@ -280,36 +285,72 @@ void VulkanApp::updatePerformanceStats() {
     // Sync render settings with internal variables
     m_maxSteps = m_renderSettings.maxSteps;
     m_maxDistance = m_renderSettings.maxDistance;
-    m_enableTrees = m_renderSettings.enableTrees;
     m_enableWater = m_renderSettings.enableWater;
-    m_enableClouds = m_renderSettings.enableClouds;
     m_qualityLevel = m_renderSettings.qualityLevel;
-    m_treeDistance = m_renderSettings.treeDistance;
 }
 
 void VulkanApp::updateUniformBuffer() {
     auto currentTime = std::chrono::high_resolution_clock::now();
     float time = std::chrono::duration<float, std::chrono::seconds::period>(currentTime - m_startTime).count();
-
+    
     UniformBufferObject ubo{};
+    
+    // Camera and matrices
     ubo.cameraPos = m_cameraPos;
     ubo.cameraTarget = m_cameraTarget;
     ubo.time = time;
     ubo.aspectRatio = static_cast<float>(m_windowManager->getWidth()) / static_cast<float>(m_windowManager->getHeight());
-    
-    // Create simple view and projection matrices
     ubo.viewMatrix = glm::lookAt(m_cameraPos, m_cameraTarget, glm::vec3(0.0f, 1.0f, 0.0f));
-    ubo.projMatrix = glm::perspective(glm::radians(45.0f), ubo.aspectRatio, 0.1f, 100.0f);
+    ubo.projMatrix = glm::perspective(glm::radians(45.0f), ubo.aspectRatio, 0.1f, 500.0f);
     
-    // Performance settings
-    ubo.maxSteps = m_maxSteps;
-    ubo.maxDistance = m_maxDistance;
-    ubo.enableTrees = m_enableTrees ? 1 : 0;
+    // Stunning lighting setup with dynamic day/night cycle
+    float sunAngle = time * 0.05f; // Slow sun movement
+    ubo.sunDirection = glm::normalize(glm::vec3(
+        sin(sunAngle) * 0.6f,
+        0.8f + cos(sunAngle) * 0.3f,
+        cos(sunAngle) * 0.4f
+    ));
+    ubo.sunIntensity = 2.5f;
+    ubo.sunColor = glm::vec3(1.0f, 0.95f, 0.8f);
+    
+    // Dynamic ambient lighting based on time of day
+    float dayFactor = glm::max(ubo.sunDirection.y, 0.0f);
+    ubo.ambientColor = glm::mix(
+        glm::vec3(0.1f, 0.15f, 0.3f), // Night
+        glm::vec3(0.4f, 0.5f, 0.6f),  // Day
+        dayFactor
+    );
+    ubo.ambientIntensity = 0.4f + dayFactor * 0.3f;
+    
+    // Dynamic sky colors for stunning visuals
+    ubo.skyColorHorizon = glm::mix(
+        glm::vec3(0.3f, 0.2f, 0.4f),  // Night horizon (purple)
+        glm::vec3(1.0f, 0.7f, 0.5f),  // Day horizon (warm orange)
+        dayFactor
+    );
+    ubo.skyColorZenith = glm::mix(
+        glm::vec3(0.05f, 0.05f, 0.15f), // Night zenith (dark blue)
+        glm::vec3(0.3f, 0.6f, 1.0f),     // Day zenith (bright blue)
+        dayFactor
+    );
+    
+    // Atmospheric fog
+    ubo.fogColor = glm::mix(
+        glm::vec3(0.2f, 0.25f, 0.4f),  // Night fog
+        glm::vec3(0.8f, 0.9f, 1.0f),   // Day fog
+        dayFactor
+    );
+    ubo.fogDensity = 0.005f;
+    
+    // Terrain settings for variety
+    ubo.terrainScale = 1.0f;
+    ubo.terrainHeight = 25.0f;
+    ubo.waterLevel = -1.0f;
     ubo.enableWater = m_enableWater ? 1 : 0;
-    ubo.enableClouds = m_enableClouds ? 1 : 0;
+    
+    // Quality settings
     ubo.qualityLevel = m_qualityLevel;
-    ubo.treeDistance = m_treeDistance;
-    ubo.padding = 0.0f;
+    ubo.viewDistance = 250.0f;
 
     // Update the uniform buffer
     m_pipeline->getUniformBuffer()->updateBuffer(ubo);
@@ -407,11 +448,11 @@ void VulkanApp::processInput() {
     // Performance control hotkeys (with debouncing)
     static bool keys[10] = {false}; // Track key states for debouncing
     
-    // Toggle trees with '1'
+    // Toggle quality level with '1'
     bool key1 = glfwGetKey(window, GLFW_KEY_1) == GLFW_PRESS;
     if (key1 && !keys[0]) {
-        m_enableTrees = !m_enableTrees;
-        std::cout << "Trees: " << (m_enableTrees ? "ON" : "OFF") << std::endl;
+        m_qualityLevel = (m_qualityLevel + 1) % 3;
+        std::cout << "Quality: " << (m_qualityLevel == 0 ? "Low" : (m_qualityLevel == 1 ? "Medium" : "High")) << std::endl;
     }
     keys[0] = key1;
     
@@ -423,11 +464,11 @@ void VulkanApp::processInput() {
     }
     keys[1] = key2;
     
-    // Toggle clouds with '3'
+    // Toggle view distance with '3'
     bool key3 = glfwGetKey(window, GLFW_KEY_3) == GLFW_PRESS;
     if (key3 && !keys[2]) {
-        m_enableClouds = !m_enableClouds;
-        std::cout << "Clouds: " << (m_enableClouds ? "ON" : "OFF") << std::endl;
+        m_renderSettings.viewDistance = (m_renderSettings.viewDistance > 250.0f) ? 150.0f : 350.0f;
+        std::cout << "View Distance: " << m_renderSettings.viewDistance << std::endl;
     }
     keys[2] = key3;
     
@@ -462,3 +503,4 @@ void VulkanApp::processInput() {
     }
     keys[6] = keyF1;
 }
+

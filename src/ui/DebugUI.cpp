@@ -133,6 +133,11 @@ void DebugUI::renderDebugPanel(PerformanceStats& stats, RenderSettings& settings
         ImGui::Text("CPU Time: %.3f ms", stats.cpuTime * 1000.0f);
         ImGui::Text("GPU Time: %.3f ms", stats.gpuTime * 1000.0f);
         
+        ImGui::Separator();
+        ImGui::Text("Terrain Performance");
+        ImGui::Text("Raymarching Steps: Dynamic");
+        ImGui::Text("Terrain Quality: %s", stats.qualityLevel == 0 ? "Low" : (stats.qualityLevel == 1 ? "Medium" : "High"));
+        
         // Performance graph would go here
         if (ImGui::Button("Reset Stats")) {
             stats = PerformanceStats{};
@@ -148,10 +153,24 @@ void DebugUI::renderDebugPanel(PerformanceStats& stats, RenderSettings& settings
         ImGui::Combo("Quality Level", &settings.qualityLevel, qualityItems, IM_ARRAYSIZE(qualityItems));
         
         ImGui::Separator();
-        ImGui::Text("Features (Simplified Mode)");
-        ImGui::TextDisabled("Trees: Disabled for performance");
-        ImGui::TextDisabled("Water: Disabled for performance"); 
-        ImGui::TextDisabled("Clouds: Disabled for performance");
+        ImGui::Text("Terrain Features");
+        ImGui::Checkbox("Enable Water", &settings.enableWater);
+        ImGui::SliderFloat("View Distance", &settings.viewDistance, 100.0f, 500.0f);
+        ImGui::SliderFloat("Fog Density", &settings.fogDensity, 0.001f, 0.02f);
+        
+        ImGui::Separator();
+        ImGui::Text("Visual Effects");
+        ImGui::ColorEdit3("Sky Horizon", &settings.skyHorizon.x);
+        ImGui::ColorEdit3("Sky Zenith", &settings.skyZenith.x);
+        ImGui::ColorEdit3("Sun Color", &settings.sunColor.x);
+        ImGui::SliderFloat("Sun Intensity", &settings.sunIntensity, 1.0f, 5.0f);
+        
+        ImGui::Separator();
+        ImGui::Text("Time of Day");
+        ImGui::SliderFloat("Time Speed", &settings.timeSpeed, 0.0f, 1.0f);
+        if (ImGui::Button("Reset to Noon")) {
+            settings.timeOffset = 0.0f;
+        }
         
         ImGui::Separator();
         ImGui::Checkbox("V-Sync", &settings.enableVSync);

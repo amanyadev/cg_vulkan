@@ -10,6 +10,7 @@
 #include <imgui_impl_glfw.h>
 #include <imgui_impl_vulkan.h>
 #include <memory>
+#include <glm/glm.hpp>
 
 struct PerformanceStats {
     float frameTime = 0.0f;
@@ -17,18 +18,26 @@ struct PerformanceStats {
     int trianglesRendered = 0;
     float cpuTime = 0.0f;
     float gpuTime = 0.0f;
+    int qualityLevel = 2;
 };
 
 struct RenderSettings {
     int maxSteps = 150;
     float maxDistance = 200.0f;
-    bool enableTrees = true;
     bool enableWater = true;
-    bool enableClouds = true;
     int qualityLevel = 2; // 0=low, 1=med, 2=high
-    float treeDistance = 50.0f;
     bool showDebugUI = true;
     bool enableVSync = true;
+    
+    // Visual settings for stunning terrain
+    float viewDistance = 250.0f;
+    float fogDensity = 0.005f;
+    glm::vec3 skyHorizon = glm::vec3(1.0f, 0.7f, 0.5f);
+    glm::vec3 skyZenith = glm::vec3(0.3f, 0.6f, 1.0f);
+    glm::vec3 sunColor = glm::vec3(1.0f, 0.95f, 0.8f);
+    float sunIntensity = 2.5f;
+    float timeSpeed = 0.05f;
+    float timeOffset = 0.0f;
 };
 
 class DebugUI {

@@ -8,6 +8,7 @@
 #include "core/WindowManager.h"
 #include "core/VulkanDevice.h"
 #include "core/VulkanSync.h"
+#include "core/FrustumCuller.h"
 #include "debug/VulkanDebug.h"
 #include "rendering/SwapChain.h"
 #include "rendering/GraphicsPipeline.h"
@@ -51,6 +52,7 @@ private:
     std::unique_ptr<Framebuffer> m_framebuffer;
     std::unique_ptr<VulkanSync> m_sync;
     std::unique_ptr<DebugUI> m_debugUI;
+    std::unique_ptr<FrustumCuller> m_frustumCuller;
 
     VkInstance m_instance{VK_NULL_HANDLE};
     VkSurfaceKHR m_surface{VK_NULL_HANDLE};
@@ -70,14 +72,11 @@ private:
     std::chrono::high_resolution_clock::time_point m_startTime;
     std::chrono::high_resolution_clock::time_point m_lastFrameTime;
     
-    // Performance settings
-    int m_maxSteps{80};          // Reduced from 150 for better performance
-    float m_maxDistance{150.0f}; // Reduced from 200 for better performance
-    bool m_enableTrees{true};
+    // Performance settings  
+    int m_maxSteps{80};          
+    float m_maxDistance{150.0f}; 
     bool m_enableWater{true};
-    bool m_enableClouds{true};
     int m_qualityLevel{1};       // 0=low, 1=med, 2=high
-    float m_treeDistance{30.0f}; // Reduced from 50 for better performance
     
     // Frame timing
     float m_frameTime{0.0f};

@@ -43,7 +43,8 @@ set(CORE_SOURCES
         src/core/VulkanApp.cpp
         src/core/VulkanDevice.cpp
         src/core/WindowManager.cpp
-        src/core/VulkanSync.cpp)
+        src/core/VulkanSync.cpp
+        src/core/FrustumCuller.cpp)
 
 set(DEBUG_SOURCES
         src/debug/VulkanDebug.cpp)
@@ -59,12 +60,15 @@ set(RENDERING_SOURCES
 set(UI_SOURCES
         src/ui/DebugUI.cpp)
 
+# ECS and scene sources temporarily disabled for performance
+
 # Combine all sources
 set(SOURCES
         ${CORE_SOURCES}
         ${DEBUG_SOURCES}
         ${RENDERING_SOURCES}
         ${UI_SOURCES}
+# ${SCENE_SOURCES}
         main.cpp)
 
 # Create executable

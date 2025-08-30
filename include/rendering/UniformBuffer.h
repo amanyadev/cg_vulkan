@@ -5,23 +5,39 @@
 #include <glm/glm.hpp>
 #include <memory>
 
+// Simplified terrain-only uniform buffer
 struct UniformBufferObject {
     glm::vec3 cameraPos;
     float time;
-    glm::vec3 cameraTarget; 
+    glm::vec3 cameraTarget;
     float aspectRatio;
     glm::mat4 viewMatrix;
     glm::mat4 projMatrix;
     
-    // Performance and debug settings
-    int maxSteps;           // Raymarching max steps
-    float maxDistance;      // Raymarching max distance
-    int enableTrees;        // 1 = enabled, 0 = disabled
-    int enableWater;        // 1 = enabled, 0 = disabled
-    int enableClouds;       // 1 = enabled, 0 = disabled
-    int qualityLevel;       // 0 = low, 1 = medium, 2 = high
-    float treeDistance;     // Max distance to render trees
-    float padding;          // Alignment padding
+    // Scene lighting
+    glm::vec3 sunDirection;
+    float sunIntensity;
+    glm::vec3 sunColor;
+    float padding1;
+    glm::vec3 ambientColor;
+    float ambientIntensity;
+    glm::vec3 skyColorHorizon;
+    float padding2;
+    glm::vec3 skyColorZenith;
+    float padding3;
+    glm::vec3 fogColor;
+    float fogDensity;
+    
+    // Terrain settings
+    float terrainScale;
+    float terrainHeight;
+    float waterLevel;
+    int enableWater;
+    
+    // Quality settings
+    int qualityLevel;
+    float viewDistance;
+    float padding4[2];
 };
 
 class UniformBuffer {
