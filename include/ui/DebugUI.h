@@ -4,6 +4,8 @@
 #include "rendering/SwapChain.h"
 #include "rendering/RenderPass.h"
 #include "rendering/UniformBuffer.h"
+#include "viewer/GLTFViewer.h"
+#include "utils/FileDialog.h"
 #include <vulkan/vulkan.h>
 #include <GLFW/glfw3.h>
 #include <imgui.h>
@@ -40,6 +42,22 @@ struct RenderSettings {
     float timeOffset = 0.0f;
 };
 
+struct BackgroundSettings {
+    enum class Type { SOLID_COLOR, GRADIENT, SKYBOX };
+    Type type = Type::GRADIENT;
+    
+    // Solid color
+    glm::vec3 solidColor = glm::vec3(0.1f, 0.1f, 0.15f);
+    
+    // Gradient
+    glm::vec3 gradientTop = glm::vec3(0.3f, 0.6f, 1.0f);    // Sky blue
+    glm::vec3 gradientBottom = glm::vec3(0.8f, 0.9f, 1.0f); // Light blue
+    
+    // Environment
+    float environmentRotation = 0.0f;
+    float environmentIntensity = 1.0f;
+};
+
 class DebugUI {
 public:
     DebugUI(VulkanDevice* device, SwapChain* swapChain, VkRenderPass renderPass, GLFWwindow* window);
@@ -48,6 +66,7 @@ public:
     void newFrame();
     void render();
     void renderDebugPanel(PerformanceStats& stats, RenderSettings& settings);
+    void renderViewerPanel(PerformanceStats& stats, GLTFViewer* viewer, BackgroundSettings& backgroundSettings);
     void renderDrawData(VkCommandBuffer commandBuffer);
     
     VkCommandBuffer getCommandBuffer() const { return m_commandBuffer; }

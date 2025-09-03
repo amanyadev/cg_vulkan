@@ -14,7 +14,8 @@ public:
 private:
     void createRenderPass();
     void createColorAttachment(VkAttachmentDescription& colorAttachment);
-    void setupSubpass(VkSubpassDescription& subpass, VkAttachmentReference& colorAttachmentRef);
+    void createDepthAttachment(VkAttachmentDescription& depthAttachment);
+    void setupSubpass(VkSubpassDescription& subpass, VkAttachmentReference& colorAttachmentRef, VkAttachmentReference& depthAttachmentRef);
     void setupDependency(VkSubpassDependency& dependency);
 
     VulkanDevice* m_device;

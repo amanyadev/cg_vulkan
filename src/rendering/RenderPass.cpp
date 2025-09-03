@@ -1,6 +1,7 @@
 #include "rendering/RenderPass.h"
 #include "core/VulkanDevice.h"
 #include <stdexcept>
+#include <array>
 
 RenderPass::RenderPass(VulkanDevice* device, SwapChain* swapChain)
     : m_device(device), m_swapChain(swapChain), m_renderPass(VK_NULL_HANDLE) {
@@ -25,15 +26,32 @@ void RenderPass::createColorAttachment(VkAttachmentDescription& colorAttachment)
     colorAttachment.finalLayout = VK_IMAGE_LAYOUT_PRESENT_SRC_KHR;
 }
 
-void RenderPass::setupSubpass(VkSubpassDescription& subpass, VkAttachmentReference& colorAttachmentRef) {
+void RenderPass::createDepthAttachment(VkAttachmentDescription& depthAttachment) {
+    depthAttachment = {};
+    depthAttachment.format = VK_FORMAT_D32_SFLOAT;
+    depthAttachment.samples = VK_SAMPLE_COUNT_1_BIT;
+    depthAttachment.loadOp = VK_ATTACHMENT_LOAD_OP_CLEAR;
+    depthAttachment.storeOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.stencilLoadOp = VK_ATTACHMENT_LOAD_OP_DONT_CARE;
+    depthAttachment.stencilStoreOp = VK_ATTACHMENT_STORE_OP_DONT_CARE;
+    depthAttachment.initialLayout = VK_IMAGE_LAYOUT_UNDEFINED;
+    depthAttachment.finalLayout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
+}
+
+void RenderPass::setupSubpass(VkSubpassDescription& subpass, VkAttachmentReference& colorAttachmentRef, VkAttachmentReference& depthAttachmentRef) {
     colorAttachmentRef = {};
     colorAttachmentRef.attachment = 0;
     colorAttachmentRef.layout = VK_IMAGE_LAYOUT_COLOR_ATTACHMENT_OPTIMAL;
+
+    depthAttachmentRef = {};
+    depthAttachmentRef.attachment = 1;
+    depthAttachmentRef.layout = VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL;
 
     subpass = {};
     subpass.pipelineBindPoint = VK_PIPELINE_BIND_POINT_GRAPHICS;
     subpass.colorAttachmentCount = 1;
     subpass.pColorAttachments = &colorAttachmentRef;
+    subpass.pDepthStencilAttachment = &depthAttachmentRef;
 }
 
 void RenderPass::setupDependency(VkSubpassDependency& dependency) {
@@ -47,20 +65,23 @@ void RenderPass::setupDependency(VkSubpassDependency& dependency) {
 }
 
 void RenderPass::createRenderPass() {
-    VkAttachmentDescription colorAttachment;
+    VkAttachmentDescription colorAttachment, depthAttachment;
     createColorAttachment(colorAttachment);
+    createDepthAttachment(depthAttachment);
 
-    VkAttachmentReference colorAttachmentRef;
+    std::array<VkAttachmentDescription, 2> attachments = {colorAttachment, depthAttachment};
+
+    VkAttachmentReference colorAttachmentRef, depthAttachmentRef;
     VkSubpassDescription subpass;
-    setupSubpass(subpass, colorAttachmentRef);
+    setupSubpass(subpass, colorAttachmentRef, depthAttachmentRef);
 
     VkSubpassDependency dependency;
     setupDependency(dependency);
 
     VkRenderPassCreateInfo renderPassInfo{};
     renderPassInfo.sType = VK_STRUCTURE_TYPE_RENDER_PASS_CREATE_INFO;
-    renderPassInfo.attachmentCount = 1;
-    renderPassInfo.pAttachments = &colorAttachment;
+    renderPassInfo.attachmentCount = static_cast<uint32_t>(attachments.size());
+    renderPassInfo.pAttachments = attachments.data();
     renderPassInfo.subpassCount = 1;
     renderPassInfo.pSubpasses = &subpass;
     renderPassInfo.dependencyCount = 1;

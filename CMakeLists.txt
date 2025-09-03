@@ -15,7 +15,26 @@ FetchContent_Declare(
     GIT_REPOSITORY https://github.com/ocornut/imgui.git
     GIT_TAG docking
 )
-FetchContent_MakeAvailable(imgui)
+
+FetchContent_Declare(
+    tinygltf
+    GIT_REPOSITORY https://github.com/syoyo/tinygltf.git
+    GIT_TAG v2.9.0
+)
+
+FetchContent_Declare(
+    nfd
+    GIT_REPOSITORY https://github.com/btzy/nativefiledialog-extended.git
+    GIT_TAG v1.2.0
+)
+
+FetchContent_Declare(
+    tinyexr
+    GIT_REPOSITORY https://github.com/syoyo/tinyexr.git
+    GIT_TAG v1.0.8
+)
+
+FetchContent_MakeAvailable(imgui tinygltf nfd tinyexr)
 
 # Create ImGui library
 add_library(imgui STATIC
@@ -60,7 +79,15 @@ set(RENDERING_SOURCES
 set(UI_SOURCES
         src/ui/DebugUI.cpp)
 
-# ECS and scene sources temporarily disabled for performance
+set(VIEWER_SOURCES
+        src/viewer/GLTFViewer.cpp
+        src/viewer/GLTFLoader.cpp
+        src/viewer/OrbitCamera.cpp
+        src/viewer/Gizmo.cpp)
+
+set(UTILS_SOURCES
+        src/utils/FileDialog.cpp
+        src/utils/EXRLoader.cpp)
 
 # Combine all sources
 set(SOURCES
@@ -68,7 +95,8 @@ set(SOURCES
         ${DEBUG_SOURCES}
         ${RENDERING_SOURCES}
         ${UI_SOURCES}
-# ${SCENE_SOURCES}
+        ${VIEWER_SOURCES}
+        ${UTILS_SOURCES}
         main.cpp)
 
 # Create executable
@@ -108,10 +136,12 @@ endforeach ()
 add_custom_target(Shaders DEPENDS ${SHADER_BINARIES})
 add_dependencies(${PROJECT_NAME} Shaders)
 
-# Configure include directories
+# Configure include directories  
 target_include_directories(${PROJECT_NAME} PRIVATE
         ${CMAKE_SOURCE_DIR}/include
-        ${Vulkan_INCLUDE_DIRS})
+        ${Vulkan_INCLUDE_DIRS}
+        ${tinygltf_SOURCE_DIR}
+        ${tinyexr_SOURCE_DIR})
 
 if (APPLE)
     target_compile_definitions(${PROJECT_NAME} PRIVATE
@@ -124,7 +154,8 @@ target_link_libraries(${PROJECT_NAME} PRIVATE
         Vulkan::Vulkan
         glfw
         glm::glm
-        imgui)
+        imgui
+        nfd)
 
 # Copy shaders to build directory
 add_custom_command(

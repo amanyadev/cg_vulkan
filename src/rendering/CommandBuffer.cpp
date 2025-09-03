@@ -1,6 +1,7 @@
 #include "rendering/CommandBuffer.h"
 #include "ui/DebugUI.h"
 #include <stdexcept>
+#include <array>
 
 CommandBuffer::CommandBuffer(VulkanDevice* device) : m_device(device) {
     createCommandPool();
@@ -12,11 +13,14 @@ CommandBuffer::~CommandBuffer() {
 
 void CommandBuffer::cleanup() {
     if (m_commandPool != VK_NULL_HANDLE) {
-        vkFreeCommandBuffers(m_device->getDevice(), m_commandPool,
-            static_cast<uint32_t>(m_commandBuffers.size()), m_commandBuffers.data());
+        if (!m_commandBuffers.empty()) {
+            vkFreeCommandBuffers(m_device->getDevice(), m_commandPool,
+                static_cast<uint32_t>(m_commandBuffers.size()), m_commandBuffers.data());
+        }
         vkDestroyCommandPool(m_device->getDevice(), m_commandPool, nullptr);
         m_commandPool = VK_NULL_HANDLE;
     }
+    m_commandBuffers.clear();
 }
 
 void CommandBuffer::createCommandPool() {
@@ -64,7 +68,7 @@ void CommandBuffer::createCommandBuffers(VkRenderPass renderPass,
         renderPassInfo.renderArea.offset = {0, 0};
         renderPassInfo.renderArea.extent = extent;
 
-        VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
+        VkClearValue clearColor = {{{0.95f, 0.95f, 0.95f, 1.0f}}};
         renderPassInfo.clearValueCount = 1;
         renderPassInfo.pClearValues = &clearColor;
 
@@ -77,8 +81,7 @@ void CommandBuffer::createCommandBuffers(VkRenderPass renderPass,
         vkCmdBindDescriptorSets(m_commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS,
             pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
 
-        // Draw a triangle (3 vertices, 1 instance, starting at vertex 0 and instance 0)
-        vkCmdDraw(m_commandBuffers[i], 3, 1, 0, 0);
+        // No drawing commands here - actual rendering is done in recordCommandBuffer method
 
         vkCmdEndRenderPass(m_commandBuffers[i]);
 
@@ -90,7 +93,7 @@ void CommandBuffer::createCommandBuffers(VkRenderPass renderPass,
 
 void CommandBuffer::recordCommandBuffer(size_t index, VkRenderPass renderPass, VkFramebuffer framebuffer,
                                        VkExtent2D extent, VkPipeline graphicsPipeline, VkPipelineLayout pipelineLayout,
-                                       VkDescriptorSet descriptorSet, DebugUI* debugUI) {
+                                       VkDescriptorSet descriptorSet, DebugUI* debugUI, GLTFViewer* viewer) {
     
     VkCommandBufferBeginInfo beginInfo{};
     beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
@@ -107,21 +110,31 @@ void CommandBuffer::recordCommandBuffer(size_t index, VkRenderPass renderPass, V
     renderPassInfo.renderArea.offset = {0, 0};
     renderPassInfo.renderArea.extent = extent;
 
-    VkClearValue clearColor = {{{0.0f, 0.0f, 0.0f, 1.0f}}};
-    renderPassInfo.clearValueCount = 1;
-    renderPassInfo.pClearValues = &clearColor;
+    std::array<VkClearValue, 2> clearValues{};
+    clearValues[0].color = {{0.95f, 0.95f, 0.95f, 1.0f}};
+    clearValues[1].depthStencil = {1.0f, 0};
+    
+    renderPassInfo.clearValueCount = static_cast<uint32_t>(clearValues.size());
+    renderPassInfo.pClearValues = clearValues.data();
 
     vkCmdBeginRenderPass(m_commandBuffers[index], &renderPassInfo, VK_SUBPASS_CONTENTS_INLINE);
 
     // Bind the graphics pipeline
     vkCmdBindPipeline(m_commandBuffers[index], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
-    // Bind descriptor set
-    vkCmdBindDescriptorSets(m_commandBuffers[index], VK_PIPELINE_BIND_POINT_GRAPHICS,
-        pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
-
-    // Draw a triangle
-    vkCmdDraw(m_commandBuffers[index], 3, 1, 0, 0);
+    // Render model through GLTFViewer if provided
+    if (viewer && viewer->hasModel()) {
+        // Bind GLTFViewer's descriptor set which has proper camera matrices
+        VkDescriptorSet viewerDescriptorSet = viewer->getDescriptorSet();
+        vkCmdBindDescriptorSets(m_commandBuffers[index], VK_PIPELINE_BIND_POINT_GRAPHICS,
+            pipelineLayout, 0, 1, &viewerDescriptorSet, 0, nullptr);
+        
+        viewer->renderToCommandBuffer(m_commandBuffers[index], pipelineLayout);
+    } else {
+        // Fallback to pipeline descriptor set if no model
+        vkCmdBindDescriptorSets(m_commandBuffers[index], VK_PIPELINE_BIND_POINT_GRAPHICS,
+            pipelineLayout, 0, 1, &descriptorSet, 0, nullptr);
+    }
 
     // Render ImGui if provided
     if (debugUI) {

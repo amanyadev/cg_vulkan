@@ -5,39 +5,43 @@
 #include <glm/glm.hpp>
 #include <memory>
 
-// Simplified terrain-only uniform buffer
+// glTF viewer uniform buffer (matches shader layout exactly)
 struct UniformBufferObject {
-    glm::vec3 cameraPos;
-    float time;
-    glm::vec3 cameraTarget;
-    float aspectRatio;
+    glm::mat4 modelMatrix;
     glm::mat4 viewMatrix;
     glm::mat4 projMatrix;
+    glm::mat4 normalMatrix;
     
-    // Scene lighting
-    glm::vec3 sunDirection;
-    float sunIntensity;
-    glm::vec3 sunColor;
+    glm::vec3 cameraPos;
+    float time;
+    
+    // Primary light
+    glm::vec3 lightDirection;
+    float lightIntensity;
+    glm::vec3 lightColor;
     float padding1;
+    
+    // Secondary light
+    glm::vec3 light2Direction;
+    float light2Intensity;
+    glm::vec3 light2Color;
+    float padding2;
+    
+    // Ambient lighting
     glm::vec3 ambientColor;
     float ambientIntensity;
-    glm::vec3 skyColorHorizon;
-    float padding2;
-    glm::vec3 skyColorZenith;
+    
+    // IBL and environment
+    float exposure;
+    float gamma;
+    float iblIntensity;
+    float shadowIntensity;
+    
+    // Material override
+    float metallicFactor;
+    float roughnessFactor;
+    int renderMode; // 0=PBR, 1=wireframe, 2=points, 3=normals, etc.
     float padding3;
-    glm::vec3 fogColor;
-    float fogDensity;
-    
-    // Terrain settings
-    float terrainScale;
-    float terrainHeight;
-    float waterLevel;
-    int enableWater;
-    
-    // Quality settings
-    int qualityLevel;
-    float viewDistance;
-    float padding4[2];
 };
 
 class UniformBuffer {

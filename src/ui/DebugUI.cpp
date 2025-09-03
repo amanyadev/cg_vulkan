@@ -195,3 +195,327 @@ void DebugUI::renderDebugPanel(PerformanceStats& stats, RenderSettings& settings
     
     ImGui::End();
 }
+
+void DebugUI::renderViewerPanel(PerformanceStats& stats, GLTFViewer* viewer, BackgroundSettings& backgroundSettings) {
+    if (!viewer) return;
+    
+    ImGui::Begin("glTF Viewer Controls");
+    
+    // Performance stats
+    if (ImGui::CollapsingHeader("Performance")) {
+        ImGui::Text("FPS: %.1f (%.2f ms)", stats.fps, stats.frameTime * 1000.0f);
+        ImGui::Text("CPU Time: %.2f ms", stats.cpuTime * 1000.0f);
+        ImGui::Text("GPU Time: %.2f ms", stats.gpuTime * 1000.0f);
+        if (viewer->isModelLoaded()) {
+            ImGui::Text("Vertices: %d", viewer->getVertexCount());
+            ImGui::Text("Triangles: %d", viewer->getTriangleCount());
+            ImGui::Text("Meshes: %d", viewer->getMeshCount());
+            ImGui::Text("Materials: %d", viewer->getMaterialCount());
+        }
+    }
+    
+    // Model loading
+    if (ImGui::CollapsingHeader("Model", ImGuiTreeNodeFlags_DefaultOpen)) {
+        if (ImGui::Button("Load glTF Model...")) {
+            std::vector<FileDialog::Filter> filters = {
+                {"glTF Models", "gltf,glb"},
+                {"glTF ASCII", "gltf"},
+                {"glTF Binary", "glb"}
+            };
+            
+            std::string filePath = FileDialog::openFile(filters);
+            if (!filePath.empty()) {
+                viewer->loadModel(filePath);
+            }
+        }
+        
+        ImGui::SameLine();
+        ImGui::Text("Supported: .gltf, .glb");
+        
+        // EXR texture loading
+        if (ImGui::Button("Load EXR Texture...")) {
+            std::vector<FileDialog::Filter> exrFilters = {
+                {"EXR Images", "exr"},
+                {"High Dynamic Range", "hdr,exr"}
+            };
+            
+            std::string exrPath = FileDialog::openFile(exrFilters);
+            if (!exrPath.empty()) {
+                // For now, just show that EXR loading is available
+                ImGui::OpenPopup("EXR Loading");
+            }
+        }
+        
+        ImGui::SameLine();
+        ImGui::Text("HDR textures: .exr");
+        
+        // EXR loading popup
+        if (ImGui::BeginPopupModal("EXR Loading", nullptr, ImGuiWindowFlags_AlwaysAutoResize)) {
+            ImGui::Text("EXR loading is currently disabled due to dependency issues.");
+            ImGui::Text("EXR files can be referenced in glTF models for proper loading.");
+            ImGui::Separator();
+            if (ImGui::Button("OK")) {
+                ImGui::CloseCurrentPopup();
+            }
+            ImGui::EndPopup();
+        }
+        
+        if (viewer->isModelLoaded()) {
+            ImGui::Text("Model: %s", viewer->getModelPath().c_str());
+            ImGui::Text("Center: (%.2f, %.2f, %.2f)", 
+                viewer->getModelCenter().x, 
+                viewer->getModelCenter().y, 
+                viewer->getModelCenter().z);
+            ImGui::Text("Radius: %.2f", viewer->getModelRadius());
+        } else {
+            ImGui::Text("No model loaded");
+        }
+    }
+    
+    // Rendering options
+    if (ImGui::CollapsingHeader("Rendering", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ViewerSettings& settings = viewer->getSettings();
+        
+        // Render mode
+        const char* renderModes[] = {"PBR", "Wireframe", "Points", "Normals", "Albedo", "Metallic", "Roughness", "AO"};
+        if (ImGui::Combo("Render Mode", &settings.renderMode, renderModes, 8)) {
+            // renderMode is now an int, so no conversion needed
+        }
+        
+        // Material overrides
+        ImGui::Checkbox("Use Vertex Colors", &settings.useVertexColors);
+        ImGui::Checkbox("Show Textures", &settings.showTextures);
+        ImGui::Checkbox("Show Normals", &settings.showNormals);
+        
+        ImGui::ColorEdit3("Material Color", &settings.materialColor[0]);
+        ImGui::SliderFloat("Metallic", &settings.metallicFactor, 0.0f, 1.0f);
+        ImGui::SliderFloat("Roughness", &settings.roughnessFactor, 0.0f, 1.0f);
+        
+        // Debug visualization
+        ImGui::Checkbox("Show Wireframe Overlay", &settings.showWireframe);
+        ImGui::Checkbox("Show Bounding Box", &settings.showBoundingBox);
+    }
+    
+    // Lighting controls
+    if (ImGui::CollapsingHeader("Lighting", ImGuiTreeNodeFlags_DefaultOpen)) {
+        ViewerSettings& settings = viewer->getSettings();
+        
+        // Primary Light
+        ImGui::Text("Primary Light");
+        ImGui::SliderFloat3("Direction##1", &settings.lightDirection[0], -1.0f, 1.0f);
+        ImGui::ColorEdit3("Color##1", &settings.lightColor[0]);
+        ImGui::SliderFloat("Intensity##1", &settings.lightIntensity, 0.0f, 10.0f);
+        
+        ImGui::Separator();
+        
+        // Secondary Light
+        ImGui::Text("Secondary Light");
+        ImGui::SliderFloat3("Direction##2", &settings.light2Direction[0], -1.0f, 1.0f);
+        ImGui::ColorEdit3("Color##2", &settings.light2Color[0]);
+        ImGui::SliderFloat("Intensity##2", &settings.light2Intensity, 0.0f, 10.0f);
+        
+        ImGui::Separator();
+        
+        // Ambient & IBL
+        ImGui::Text("Ambient & IBL");
+        ImGui::ColorEdit3("Ambient Color", &settings.ambientColor[0]);
+        ImGui::SliderFloat("Ambient Intensity", &settings.ambientIntensity, 0.0f, 3.0f);
+        ImGui::SliderFloat("IBL Intensity", &settings.iblIntensity, 0.0f, 3.0f);
+        
+        ImGui::Separator();
+        
+        // Post-Processing
+        ImGui::Text("Post-Processing");
+        ImGui::SliderFloat("Exposure", &settings.exposure, 0.1f, 5.0f);
+        ImGui::SliderFloat("Gamma", &settings.gamma, 1.0f, 3.0f);
+        
+        ImGui::Separator();
+        
+        // Material Override
+        ImGui::Text("Material Override");
+        ImGui::SliderFloat("Global Metallic", &settings.metallicFactor, 0.0f, 1.0f);
+        ImGui::SliderFloat("Global Roughness", &settings.roughnessFactor, 0.0f, 1.0f);
+        
+        ImGui::Separator();
+        
+        // Debug Views
+        ImGui::Text("Debug Views");
+        const char* renderModeItems[] = { "PBR", "Wireframe", "Points", "Normals", "Albedo", "Metallic", "Roughness", "AO" };
+        ImGui::Combo("Debug Mode", &settings.renderMode, renderModeItems, IM_ARRAYSIZE(renderModeItems));
+        
+        ImGui::Separator();
+        
+        // Light Presets
+        ImGui::Text("Light Presets");
+        if (ImGui::Button("Daylight")) {
+            settings.lightDirection = glm::vec3(-0.5f, -0.8f, -0.3f);
+            settings.lightColor = glm::vec3(1.0f, 0.95f, 0.8f);
+            settings.lightIntensity = 3.0f;
+            settings.light2Direction = glm::vec3(0.3f, -0.6f, 0.7f);
+            settings.light2Color = glm::vec3(0.4f, 0.6f, 1.0f);
+            settings.light2Intensity = 1.0f;
+            settings.ambientColor = glm::vec3(0.3f, 0.4f, 0.6f);
+            settings.ambientIntensity = 0.3f;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Golden Hour")) {
+            settings.lightDirection = glm::vec3(-0.8f, -0.3f, -0.5f);
+            settings.lightColor = glm::vec3(1.0f, 0.7f, 0.3f);
+            settings.lightIntensity = 2.5f;
+            settings.light2Direction = glm::vec3(0.5f, -0.2f, 0.8f);
+            settings.light2Color = glm::vec3(0.2f, 0.3f, 0.8f);
+            settings.light2Intensity = 0.5f;
+            settings.ambientColor = glm::vec3(0.4f, 0.3f, 0.2f);
+            settings.ambientIntensity = 0.2f;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Studio")) {
+            settings.lightDirection = glm::vec3(-0.3f, -0.7f, -0.6f);
+            settings.lightColor = glm::vec3(1.0f, 1.0f, 1.0f);
+            settings.lightIntensity = 4.0f;
+            settings.light2Direction = glm::vec3(0.8f, -0.2f, 0.5f);
+            settings.light2Color = glm::vec3(0.8f, 0.9f, 1.0f);
+            settings.light2Intensity = 2.0f;
+            settings.ambientColor = glm::vec3(0.2f, 0.2f, 0.2f);
+            settings.ambientIntensity = 0.1f;
+        }
+        
+        if (ImGui::Button("Night")) {
+            settings.lightDirection = glm::vec3(-0.2f, -0.9f, -0.4f);
+            settings.lightColor = glm::vec3(0.8f, 0.9f, 1.0f);
+            settings.lightIntensity = 0.5f;
+            settings.light2Direction = glm::vec3(0.7f, -0.1f, 0.7f);
+            settings.light2Color = glm::vec3(0.3f, 0.4f, 0.8f);
+            settings.light2Intensity = 0.3f;
+            settings.ambientColor = glm::vec3(0.05f, 0.1f, 0.2f);
+            settings.ambientIntensity = 0.1f;
+        }
+        ImGui::SameLine();
+        if (ImGui::Button("Dramatic")) {
+            settings.lightDirection = glm::vec3(-0.9f, -0.3f, -0.3f);
+            settings.lightColor = glm::vec3(1.0f, 0.8f, 0.6f);
+            settings.lightIntensity = 6.0f;
+            settings.light2Direction = glm::vec3(0.2f, -0.8f, 0.6f);
+            settings.light2Color = glm::vec3(0.2f, 0.4f, 1.0f);
+            settings.light2Intensity = 1.5f;
+            settings.ambientColor = glm::vec3(0.0f, 0.0f, 0.0f);
+            settings.ambientIntensity = 0.05f;
+        }
+    }
+    
+    // Background settings
+    if (ImGui::CollapsingHeader("Background", ImGuiTreeNodeFlags_DefaultOpen)) {
+        const char* backgroundTypes[] = {"Solid Color", "Gradient", "Skybox"};
+        int currentType = static_cast<int>(backgroundSettings.type);
+        if (ImGui::Combo("Background Type", &currentType, backgroundTypes, 3)) {
+            backgroundSettings.type = static_cast<BackgroundSettings::Type>(currentType);
+        }
+        
+        switch (backgroundSettings.type) {
+            case BackgroundSettings::Type::SOLID_COLOR:
+                ImGui::ColorEdit3("Background Color", &backgroundSettings.solidColor[0]);
+                break;
+                
+            case BackgroundSettings::Type::GRADIENT:
+                ImGui::ColorEdit3("Top Color", &backgroundSettings.gradientTop[0]);
+                ImGui::ColorEdit3("Bottom Color", &backgroundSettings.gradientBottom[0]);
+                break;
+                
+            case BackgroundSettings::Type::SKYBOX:
+                ImGui::SliderFloat("Environment Rotation", &backgroundSettings.environmentRotation, 0.0f, 360.0f);
+                ImGui::SliderFloat("Environment Intensity", &backgroundSettings.environmentIntensity, 0.0f, 3.0f);
+                if (ImGui::Button("Load HDR Environment...")) {
+                    std::vector<FileDialog::Filter> filters = {
+                        {"HDR Images", "hdr,exr"},
+                        {"Radiance HDR", "hdr"},
+                        {"OpenEXR", "exr"}
+                    };
+                    
+                    std::string filePath = FileDialog::openFile(filters);
+                    if (!filePath.empty()) {
+                        // TODO: Implement HDR environment loading
+                        ImGui::OpenPopup("HDR Loading");
+                    }
+                }
+                if (ImGui::BeginPopup("HDR Loading")) {
+                    ImGui::Text("HDR environment loading will be implemented");
+                    ImGui::Text("in a future update.");
+                    if (ImGui::Button("OK")) {
+                        ImGui::CloseCurrentPopup();
+                    }
+                    ImGui::EndPopup();
+                }
+                break;
+        }
+    }
+    
+    // Camera controls
+    if (ImGui::CollapsingHeader("Camera")) {
+        ViewerSettings& settings = viewer->getSettings();
+        
+        if (ImGui::Button("Reset Camera")) {
+            viewer->resetCamera();
+        }
+        
+        ImGui::Checkbox("Auto Rotate", &settings.enableAutoRotate);
+        if (settings.enableAutoRotate) {
+            ImGui::SliderFloat("Rotation Speed", &settings.autoRotateSpeed, 0.1f, 2.0f);
+        }
+        
+        ImGui::Separator();
+        ImGui::Text("Camera Position: (%.2f, %.2f, %.2f)", 
+            viewer->getCameraPosition().x,
+            viewer->getCameraPosition().y, 
+            viewer->getCameraPosition().z);
+    }
+    
+    // Gizmo controls
+    if (ImGui::CollapsingHeader("Gizmos")) {
+        ViewerSettings& settings = viewer->getSettings();
+        
+        ImGui::Checkbox("Show Gizmos", &settings.showGizmo);
+        
+        if (settings.showGizmo) {
+            const char* gizmoModes[] = {"Translate", "Rotate", "Scale"};
+            int currentGizmoMode = static_cast<int>(viewer->getGizmoMode());
+            if (ImGui::Combo("Gizmo Mode", &currentGizmoMode, gizmoModes, 3)) {
+                viewer->setGizmoMode(static_cast<GizmoMode>(currentGizmoMode));
+            }
+        }
+    }
+    
+    // Export/Screenshot
+    if (ImGui::CollapsingHeader("Export")) {
+        if (ImGui::Button("Take Screenshot...")) {
+            std::vector<FileDialog::Filter> filters = {
+                {"PNG Image", "png"},
+                {"JPEG Image", "jpg,jpeg"},
+                {"Bitmap Image", "bmp"}
+            };
+            
+            std::string filePath = FileDialog::saveFile(filters);
+            if (!filePath.empty()) {
+                viewer->takeScreenshot(filePath);
+            }
+        }
+        
+        ImGui::Text("Save screenshot as PNG, JPG, or BMP");
+    }
+    
+    // Controls help
+    if (ImGui::CollapsingHeader("Controls")) {
+        ImGui::Text("Mouse Controls:");
+        ImGui::BulletText("Left drag - Orbit camera");
+        ImGui::BulletText("Scroll wheel - Zoom");
+        ImGui::BulletText("Right drag - Pan camera");
+        
+        ImGui::Text("Keyboard Shortcuts:");
+        ImGui::BulletText("R - Reset camera");
+        ImGui::BulletText("1 - Solid rendering mode");
+        ImGui::BulletText("2 - Wireframe mode");  
+        ImGui::BulletText("G - Toggle gizmos");
+        ImGui::BulletText("A - Toggle auto-rotate");
+    }
+    
+    ImGui::End();
+}

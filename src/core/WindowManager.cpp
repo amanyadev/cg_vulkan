@@ -30,6 +30,13 @@ WindowManager::WindowManager(uint32_t width, uint32_t height, const char* title)
     // Set user pointer for callbacks
     glfwSetWindowUserPointer(m_window, this);
     glfwSetFramebufferSizeCallback(m_window, framebufferResizeCallback);
+    
+    // Set input callbacks
+    glfwSetCursorPosCallback(m_window, cursorPosCallback);
+    glfwSetMouseButtonCallback(m_window, mouseButtonCallback);
+    glfwSetScrollCallback(m_window, scrollCallback);
+    glfwSetKeyCallback(m_window, keyCallback);
+    glfwSetDropCallback(m_window, dropCallback);
 
     // Verify Vulkan support
     if (!glfwVulkanSupported()) {
@@ -75,4 +82,40 @@ bool WindowManager::isMouseButtonPressed(int button) const {
 
 void WindowManager::setCursorMode(int mode) const {
     glfwSetInputMode(m_window, GLFW_CURSOR, mode);
+}
+
+// GLFW input callback implementations
+void WindowManager::cursorPosCallback(GLFWwindow* window, double xpos, double ypos) {
+    auto* windowManager = reinterpret_cast<WindowManager*>(glfwGetWindowUserPointer(window));
+    if (windowManager && windowManager->m_mouseMoveCallback) {
+        windowManager->m_mouseMoveCallback(xpos, ypos);
+    }
+}
+
+void WindowManager::mouseButtonCallback(GLFWwindow* window, int button, int action, int mods) {
+    auto* windowManager = reinterpret_cast<WindowManager*>(glfwGetWindowUserPointer(window));
+    if (windowManager && windowManager->m_mouseButtonCallback) {
+        windowManager->m_mouseButtonCallback(button, action, mods);
+    }
+}
+
+void WindowManager::scrollCallback(GLFWwindow* window, double xoffset, double yoffset) {
+    auto* windowManager = reinterpret_cast<WindowManager*>(glfwGetWindowUserPointer(window));
+    if (windowManager && windowManager->m_scrollCallback) {
+        windowManager->m_scrollCallback(xoffset, yoffset);
+    }
+}
+
+void WindowManager::keyCallback(GLFWwindow* window, int key, int scancode, int action, int mods) {
+    auto* windowManager = reinterpret_cast<WindowManager*>(glfwGetWindowUserPointer(window));
+    if (windowManager && windowManager->m_keyCallback) {
+        windowManager->m_keyCallback(key, scancode, action, mods);
+    }
+}
+
+void WindowManager::dropCallback(GLFWwindow* window, int count, const char** paths) {
+    auto* windowManager = reinterpret_cast<WindowManager*>(glfwGetWindowUserPointer(window));
+    if (windowManager && windowManager->m_dropCallback) {
+        windowManager->m_dropCallback(count, paths);
+    }
 }

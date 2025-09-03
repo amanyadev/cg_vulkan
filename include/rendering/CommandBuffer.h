@@ -15,7 +15,7 @@ public:
                             VkDescriptorSet descriptorSet);
     void recordCommandBuffer(size_t index, VkRenderPass renderPass, VkFramebuffer framebuffer,
                            VkExtent2D extent, VkPipeline graphicsPipeline, VkPipelineLayout pipelineLayout,
-                           VkDescriptorSet descriptorSet, class DebugUI* debugUI = nullptr);
+                           VkDescriptorSet descriptorSet, class DebugUI* debugUI = nullptr, class GLTFViewer* viewer = nullptr);
     VkCommandBuffer getCommandBuffer(size_t index) const { return m_commandBuffers[index]; }
     size_t size() const { return m_commandBuffers.size(); }
 

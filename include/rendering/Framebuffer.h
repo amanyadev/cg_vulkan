@@ -15,10 +15,17 @@ public:
 
 private:
     void createFramebuffers();
+    void createDepthResources();
     void cleanup();
+    uint32_t findMemoryType(uint32_t typeFilter, VkMemoryPropertyFlags properties);
 
     VulkanDevice* m_device;
     SwapChain* m_swapChain;
     VkRenderPass m_renderPass;
     std::vector<VkFramebuffer> m_swapChainFramebuffers;
+    
+    // Depth buffer resources
+    VkImage m_depthImage{VK_NULL_HANDLE};
+    VkDeviceMemory m_depthImageMemory{VK_NULL_HANDLE};
+    VkImageView m_depthImageView{VK_NULL_HANDLE};
 };
